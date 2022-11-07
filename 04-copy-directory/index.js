@@ -1,28 +1,72 @@
 const fs = require("fs");
 const path = require("path");
 
-async function copy() {
-  await fs.promises.mkdir(path.join(__dirname, "files-copy"), {
+async function copyDir(currentPath, copyPath) {
+  await fs.promises.mkdir(copyPath, {
     recursive: true,
   });
 
-  const files = await fs.promises.readdir(path.join(__dirname, "files"));
-  const filesCopy = await fs.promises.readdir(
-    path.join(__dirname, "files-copy")
-  );
-
-  for (const file of filesCopy) {
-    fs.unlink(path.join(__dirname, "files-copy", `${file}`), (err) => {
-      if (err) throw err;
-    });
-  }
+  const files = await fs.promises.readdir(currentPath, {
+    withFileTypes: true,
+  });
 
   for (const file of files) {
-    await fs.promises.copyFile(
-      path.join(__dirname, "files", `${file}`),
-      path.join(__dirname, "files-copy", `${file}`)
-    );
+    if (file.isDirectory())
+      copyDir(
+        path.join(currentPath, file.name),
+        path.join(copyPath, file.name)
+      );
+    if (file.isFile()) {
+      await fs.promises.copyFile(
+        path.join(currentPath, `${file.name}`),
+        path.join(copyPath, `${file.name}`)
+      );
+    }
   }
 }
 
-copy();
+async function deleteDir(folderPath) {
+  try {
+    const filesCopy = await fs.promises.readdir(
+      folderPath,
+      { withFileTypes: true },
+      (err) => {
+        if (err) throw err;
+      }
+    );
+    for (const file of filesCopy) {
+      if (file.isDirectory()) {
+        await fs.promises.rmdir(folderPath, { recursive: true }, (err) => {
+          if (err) {
+            if (err.code === "ENOTEMPTY") {
+              return deleteDir(path.join(folderPath, `${file.name}`));
+            }
+            throw err;
+          }
+        });
+      }
+
+      if (file.isFile()) {
+        fs.unlink(path.join(folderPath, `${file.name}`), (err) => {
+          if (err) throw err;
+        });
+      }
+    }
+  } catch (err) {
+    if (err) {
+      if (err.code === "ENOENT") {
+        return;
+      }
+      throw err;
+    }
+  }
+}
+
+async function init() {
+  await deleteDir(path.join(__dirname, "files-copy"));
+  await copyDir(
+    path.join(__dirname, "files"),
+    path.join(__dirname, "files-copy")
+  );
+}
+init();
