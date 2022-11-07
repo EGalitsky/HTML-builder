@@ -21,7 +21,7 @@ async function merge() {
         stream.on("data", (chunk) => (text += chunk));
         stream.on("end", () => {
           fs.appendFile(
-            "05-merge-styles/project-dist/bundle.css",
+            path.join(__dirname, "project-dist", "bundle.css"),
             `${text}`,
             (err) => {
               if (err) throw err;
