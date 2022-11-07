@@ -95,7 +95,6 @@ async function readFile() {
         "utf-8",
         (err, content) => {
           if (err) throw err;
-          console.log(file);
           html = html.replace(
             `{{${file.substring(0, file.lastIndexOf("."))}}}`,
             content
